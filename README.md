@@ -25,7 +25,7 @@ Options
 
  * `identity`: `IO.device` providing the ssh private key (required)
  * `known_hosts`: `IO.device` providing the known hosts list. If providing a File IO, it should have been opened in `:write` mode (required)
- * `accept_hosts`: `boolean` silently accept and add new hosts to the known hosts. By default only known hosts will be accepted.
+ * `silently_accept_hosts`: `boolean` silently accept and add new hosts to the known hosts. By default only known hosts will be accepted.
 
 `SSHClientKeyApi` is meant to primarily be used via the convenience function
 `with_config`:
@@ -33,7 +33,7 @@ Options
 ```elixir
   key = File.open!("path/to/keyfile.pub")
   known_hosts = File.open!("path/to/known_hosts")
-  cb = SSHClientKeyAPI.with_options(identity: key, known_hosts: known_hosts, accept_hosts: false)
+  cb = SSHClientKeyAPI.with_options(identity: key, known_hosts: known_hosts, silently_accept_hosts: true)
 ```
 
 The result can then be passed as an option when creating an SSH connection.

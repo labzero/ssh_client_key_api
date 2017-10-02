@@ -57,22 +57,22 @@ github.com,192.30.252.128 ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAq2A7hRGmdnm9tUDbO9
     }
   end
 
-  test "add_host_key writes an entry to known hosts if accept_hosts is true", %{known_hosts: known_hosts} do
+  test "add_host_key writes an entry to known hosts if silently_accept_hosts is true", %{known_hosts: known_hosts} do
     SSHClientKeyAPI.add_host_key(
       "example.com",
       @host_key,
-      [key_cb_private: [accept_hosts: true, known_hosts: known_hosts, known_hosts_data: IO.binread(known_hosts, :all)]]
+      [key_cb_private: [silently_accept_hosts: true, known_hosts: known_hosts, known_hosts_data: IO.binread(known_hosts, :all)]]
       )
     :file.position(known_hosts, :bof)
     result = IO.binread(known_hosts, :all)
     assert result =~ "example.com"
   end
 
-  test "add_host_key returns an error if accept_hosts is false", %{known_hosts: known_hosts} do
+  test "add_host_key returns an error if silently_accept_hosts is false", %{known_hosts: known_hosts} do
     result = SSHClientKeyAPI.add_host_key(
       "example.com",
       @host_key,
-      [key_cb_private: [accept_hosts: false, known_hosts: known_hosts, known_hosts_data: IO.binread(known_hosts, :all)]])
+      [key_cb_private: [silently_accept_hosts: false, known_hosts: known_hosts, known_hosts_data: IO.binread(known_hosts, :all)]])
     assert {:error, _message} = result
   end
 
@@ -81,7 +81,7 @@ github.com,192.30.252.128 ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAq2A7hRGmdnm9tUDbO9
       @host_key,
       'github.com',
       :"ssh-dsa",
-      [key_cb_private: [accept_hosts: false, known_hosts: known_hosts, known_hosts_data: IO.binread(known_hosts, :all)]])
+      [key_cb_private: [silently_accept_hosts: false, known_hosts: known_hosts, known_hosts_data: IO.binread(known_hosts, :all)]])
     assert result
   end
 
@@ -90,7 +90,7 @@ github.com,192.30.252.128 ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAq2A7hRGmdnm9tUDbO9
       @host_key,
       'other.com',
       :"ssh-dsa",
-      [key_cb_private: [accept_hosts: false, known_hosts: known_hosts, known_hosts_data: IO.binread(known_hosts, :all)]])
+      [key_cb_private: [silently_accept_hosts: false, known_hosts: known_hosts, known_hosts_data: IO.binread(known_hosts, :all)]])
     refute result
   end
 

@@ -14,7 +14,7 @@ defmodule SSHClientKeyAPI do
   ```
   key = File.open!("path/to/keyfile")
   known_hosts = File.open!("path/to/known_hosts")
-  cb = SSHClientKeyAPI.with_options(identity: key, known_hosts: known_hosts, accept_hosts: false)
+  cb = SSHClientKeyAPI.with_options(identity: key, known_hosts: known_hosts, silently_accept_hosts: true)
   ```
 
   The result can be passed as an option when creating an `SSHKit.SSH.Connection`:
@@ -25,7 +25,7 @@ defmodule SSHClientKeyAPI do
 
     - `identity`: `IO.device` providing the ssh key (required)
     - `known_hosts`: `IO.device` providing the known hosts list. If providing a File IO, it should have been opened in `:write` mode (required)
-    - `accept_hosts`: `boolean` silently accept and add new hosts to the known hosts. By default only known hosts will be accepted.
+    - `silently_accept_hosts`: `boolean` silently accept and add new hosts to the known hosts. By default only known hosts will be accepted.
   """
 
   @spec with_options(opts :: list) :: {atom, list}
@@ -36,7 +36,7 @@ defmodule SSHClientKeyAPI do
 
     - `identity`: `IO.device` providing the ssh key (required)
     - `known_hosts`: `IO.device` providing the known hosts list. If providing a File IO, it should have been opened in `:write` mode (required)
-    - `accept_hosts`: `boolean` silently accept and add new hosts to the known hosts. By default only known hosts will be accepted.
+    - `silently_accept_hosts`: `boolean` silently accept and add new hosts to the known hosts. By default only known hosts will be accepted.
 
      by default it will use the the files found in `System.user_home!`
 
@@ -45,7 +45,7 @@ defmodule SSHClientKeyAPI do
     ```
     key = File.open!("path/to/keyfile")
     known_hosts = File.open!("path/to/known_hosts")
-    cb = SSHClientKeyAPI.with_options(identity: key, known_hosts: known_hosts, accept_hosts: false)
+    cb = SSHClientKeyAPI.with_options(identity: key, known_hosts: known_hosts)
     SSHKit.SSH.connect("example.com", key_cb: cb)
     ```
 
@@ -60,7 +60,7 @@ defmodule SSHClientKeyAPI do
   end
 
   def add_host_key(hostname, key, opts) do
-    case accept_hosts(opts) do
+    case silently_accept_hosts(opts) do
       true ->
         opts
         |> known_hosts_data
@@ -73,14 +73,14 @@ defmodule SSHClientKeyAPI do
           """
           Error: unknown fingerprint found for #{inspect hostname} #{inspect key}.
           You either need to add a known good fingerprint to your known hosts file for this host,
-          *or* pass the accept_hosts option to your client key callback
+          *or* pass the silently_accept_hosts option to your client key callback
           """
         {:error, message}
     end
   end
 
   def is_host_key(key, hostname, alg, opts) when alg in @key_algorithms do
-    accept_hosts(opts) || opts
+    silently_accept_hosts(opts) || opts
     |> known_hosts_data
     |> to_string
     |> :public_key.ssh_decode(:known_hosts)
@@ -112,8 +112,8 @@ defmodule SSHClientKeyAPI do
     cb_opts(opts)[:identity_data]
   end
 
-  defp accept_hosts(opts) do
-    cb_opts(opts)[:accept_hosts]
+  defp silently_accept_hosts(opts) do
+    cb_opts(opts)[:silently_accept_hosts]
   end
 
   defp known_hosts(opts) do
@@ -152,7 +152,7 @@ defmodule SSHClientKeyAPI do
     opts
     |> Keyword.put_new_lazy(:identity, &default_identity/0)
     |> Keyword.put_new_lazy(:known_hosts, &default_known_hosts/0)
-    |> Keyword.put_new(:accept_hosts, true)
+    |> Keyword.put_new(:silently_accept_hosts, false)
   end
 
 end
