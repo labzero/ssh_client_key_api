@@ -80,7 +80,7 @@ github.com,192.30.252.128 ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAq2A7hRGmdnm9tUDbO9
     result = SSHClientKeyAPI.is_host_key(
       @host_key,
       'github.com',
-      :"ssh-dsa",
+      :"ssh-dss",
       [key_cb_private: [silently_accept_hosts: false, known_hosts: known_hosts, known_hosts_data: IO.binread(known_hosts, :all)]])
     assert result
   end
@@ -89,14 +89,14 @@ github.com,192.30.252.128 ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAq2A7hRGmdnm9tUDbO9
     result = SSHClientKeyAPI.is_host_key(
       @host_key,
       'other.com',
-      :"ssh-dsa",
+      :"ssh-dss",
       [key_cb_private: [silently_accept_hosts: false, known_hosts: known_hosts, known_hosts_data: IO.binread(known_hosts, :all)]])
     refute result
   end
 
   test "user key returns the contents of the key option", %{key: key} do
     result = SSHClientKeyAPI.user_key(
-      :"ssh-dsa",
+      :"ssh-dss",
       [key_cb_private: [identity: key, identity_data: IO.binread(key, :all)]]
     )
     assert result == {:ok, @decoded_pem}
