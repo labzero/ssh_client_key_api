@@ -1,7 +1,7 @@
 defmodule SSHClientKeyAPI do
 
   @behaviour :ssh_client_key_api
-  @key_algorithms ~w(ssh-rsa ssh-dsa ecdsa-sha2-nistp256 ecdsa-sha2-nistp384 ecdsa-sha2-nistp521)a
+  @key_algorithms :ssh.default_algorithms()[:public_key]
 
   @moduledoc ~S"""
 
