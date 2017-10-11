@@ -2,7 +2,7 @@ defmodule SSHClientKeyApi.Mixfile do
   use Mix.Project
 
 
-  @version "0.1.0"
+  @version "0.1.1"
   @source "https://github.com/labzero/ssh_client_key_api"
 
 
