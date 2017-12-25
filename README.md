@@ -31,7 +31,7 @@ Options
 `with_config`:
 
 ```elixir
-  key = File.open!("path/to/keyfile.pub")
+  key = File.open!("path/to/keyfile.pem")
   known_hosts = File.open!("path/to/known_hosts")
   cb = SSHClientKeyAPI.with_options(identity: key, known_hosts: known_hosts, silently_accept_hosts: true)
 ```
@@ -49,4 +49,3 @@ The result can then be passed as an option when creating an SSH connection.
 Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
 and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
 be found at [https://hexdocs.pm/ssh_client_key_api](https://hexdocs.pm/ssh_client_key_api).
-
