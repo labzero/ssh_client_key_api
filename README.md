@@ -26,6 +26,7 @@ Options
  * `identity`: `IO.device` providing the ssh private key (required)
  * `known_hosts`: `IO.device` providing the known hosts list. If providing a File IO, it should have been opened in `:write` mode (required)
  * `silently_accept_hosts`: `boolean` silently accept and add new hosts to the known hosts. By default only known hosts will be accepted.
+ * `passphrase` : `binary` passphrase if your key is protected (optional)
 
 `SSHClientKeyApi` is meant to primarily be used via the convenience function
 `with_config`:

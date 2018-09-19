@@ -9,7 +9,7 @@ defmodule SSHClientKeyAPI do
   make it easier to specify SSH keys and `known_hosts` files independently of
   any particular user's home directory
 
-  It is meant to primarily be used via the convenience function `with_config`:
+  It is meant to primarily be used via the convenience function `with_options`:
 
   ```
   key = File.open!("path/to/keyfile")
@@ -37,7 +37,8 @@ defmodule SSHClientKeyAPI do
     - `identity`: `IO.device` providing the ssh key (required)
     - `known_hosts`: `IO.device` providing the known hosts list. If providing a File IO, it should have been opened in `:write` mode (required)
     - `silently_accept_hosts`: `boolean` silently accept and add new hosts to the known hosts. By default only known hosts will be accepted.
-
+    - `passphrase` : `binary` passphrase if your key is protected (optional)
+    
      by default it will use the the files found in `System.user_home!`
 
     ### Example
@@ -92,21 +93,36 @@ defmodule SSHClientKeyAPI do
     false
   end
 
-  def user_key(alg, opts) when alg in @key_algorithms do
-    decoded =
+  def user_key(alg, opts) when alg in @key_algorithms do    
       opts
       |> identity_data
       |> to_string
       |> :public_key.pem_decode
       |> List.first
-      |> :public_key.pem_entry_decode
-    {:ok, decoded}
+      |> decode_pem_entry(Keyword.get(opts, :passphrase))    
   end
 
   def user_key(alg, _) do
-    IO.puts("unsupported user key algorithm #{inspect alg}")
-    false
+    message ="unsupported user key algorithm #{inspect alg}"
+    IO.puts(message)
+    {:error, message}
   end
+
+  defp decode_pem_entry({_type, _data, :not_encrypted} = entry, _) do
+    {:ok, :public_key.pem_entry_decode(entry)}
+  end
+
+  defp decode_pem_entry({_type, _data, _cipher_info}, nil) do
+    {:error, "passphrase needed for protected key"}
+  end
+
+  defp decode_pem_entry({_type, _data, _cipher_info} = entry, phrase) do
+    try do
+      {:ok, :public_key.pem_entry_decode(entry, phrase)}
+    rescue 
+      _e in MatchError -> {:error, "passphrase for protected key is invalid"}
+    end
+  end  
 
   defp identity_data(opts) do
     cb_opts(opts)[:identity_data]
