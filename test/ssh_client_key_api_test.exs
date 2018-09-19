@@ -35,7 +35,7 @@ LkmEnkNn9pRguHw5O4t2A2/MPTMMPl9okxWUxmFol6vrLcVWJ7fHKnAgN4VeVdmV
 
   @known_hosts """
 github.com,192.30.252.128 ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAq2A7hRGmdnm9tUDbO9IDSwBK6TbQa+PXYPCPy6rbTrTtw7PHkccKrpp0yVhp5HdEIcKr6pLlVDBfOLX9QUsyCOV0wzfjIJNlGEYsdlLJizHhbn2mUjvSAHQqZETYP81eFzLQNnPHt4EVVUh7VfDESU84KezmD5QlWpXLmvU31/yMf+Se8xhHTvKSCZIFImWwoG6mbUoWf9nzpIoaSjB+weqqUUmpaaasXVal72J+UX2B+2RPW3RcT0eOzQgqlJL3RKrTJvdsjE3JEAvGq3lGHSZXy28G3skua2SmVi/w4yCE6gbODqnTWlg7+wC604ydGXA8VJiS5ap43JXiUFFAaQ==
-  """
+"""
 
   @decoded_pem {
     :RSAPrivateKey,
@@ -50,10 +50,32 @@ github.com,192.30.252.128 ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAq2A7hRGmdnm9tUDbO9
     35
   }
 
+  @protected_key """
+-----BEGIN RSA PRIVATE KEY-----
+Proc-Type: 4,ENCRYPTED
+DEK-Info: AES-128-CBC,DFA91AAB32A89BD925F1A1F575A097AB
+
+p+Zit/zNJL0We7/it9LNP7Obf5QPpKbxej1/22dcyPTM0i+UNEzc0UZ1uq8E7HtL
+T4xbXIdm8oErcfHMUvFIAGWPo7tlIPhxuELdf+PqF8BkWyKY51PfzaPkLZ9DmkBt
+bhRqTdOhiSs8S2034Fut20XdK14ienBoKhRadKdT1qNMsUbIiITCLPE1RRAyivyt
+gA4iLhpJYW2Z3JxrNaTYONFWVsg7QphKLGqlfPJhJt5vi653NOAs5R/4zh0Ydraq
+wV61sL7byOjbCbUTz2MVlsL5tjSg9Yu8pXDCoHDA2x9d1BUK2nmVUCL4ex3tt1Mo
+2ZPMZ8d/wzdtF0WYzTursL2KHrnzVTKMHCj5FSwVAPDpd8866LmJpTSmO++jbGfm
+e98sfCO8NDNS/wqGiTyfvMwMNxAPHq6j92IaKaQn6wah0VfTdqxIKM8NbHS+uNWU
+jp1Q6f9YspqRS8/x6tAXYLAOxNLcbrQUVf6CfDNEw0PfXPEu8n73e/bTc5vqgrfp
+2sA+lcEIZIofabCs+MfvrE8yCD8YioNEEDg+rSwNczJy7CXLuuKjY+qrxwO8hoZ9
+aMSc408eQJkA8qf4WKrtnpA4uTfK95pt3sIPUEvaUlyos8kPzkVayAhWBK4iLDTJ
+kd/OKbSwaA1Wu6nBp7yvXXzf4PnSTFVQCVRTBp0Y7RN9F9wQdUkykDyQ0V+hfMzR
+amca+edDJv/IktYYERooDqUmTQsXrhvO7RCcCQZ4Fth49RcMnvAOkZvdvq2tBEyS
+FSlw/QlRe3XqAJDRtHyiI2d4JIPFcOjZQSF7fURYPEKaRRtQRvSaI0D9fYwuRZDY
+-----END RSA PRIVATE KEY-----
+"""
+
   setup do
     %{
       known_hosts: File.open!(@known_hosts, [:ram, :binary, :write, :read]),
-      key: File.open!(@private_key, [:ram, :binary])
+      key: File.open!(@private_key, [:ram, :binary]),
+      protected_key: File.open!(@protected_key, [:ram, :binary])
     }
   end
 
@@ -102,6 +124,31 @@ github.com,192.30.252.128 ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAq2A7hRGmdnm9tUDbO9
     assert result == {:ok, @decoded_pem}
   end
 
+  test "user key returns error if passphrase is missing for protected key", %{protected_key: protected_key} do
+    result = SSHClientKeyAPI.user_key(
+      :"ssh-dss",
+      [key_cb_private: [identity: protected_key, identity_data: IO.binread(protected_key, :all)]]
+    )
+    assert {:error, _} = result
+  end
+
+  test "user key returns error if passphrase is incorrect for protected key", %{protected_key: protected_key} do
+    result = SSHClientKeyAPI.user_key(
+      :"ssh-dss",
+      [key_cb_private: [passphrase: 'wrong', identity: protected_key, identity_data: IO.binread(protected_key, :all)]]
+    )
+    assert {:error, _} = result
+  end 
+  
+  test "with correct passphrase, user key returns contents of protected key", %{protected_key: protected_key} do
+    result = SSHClientKeyAPI.user_key(
+      :"ssh-dss",
+      [key_cb_private: [passphrase: 'phrase', identity: protected_key, identity_data: IO.binread(protected_key, :all)]]
+    )
+    assert {:error, _} = result
+  end 
+
+
   test "with options reads the known_hosts", %{known_hosts: known_hosts, key: key} do
     {_, opts} = SSHClientKeyAPI.with_options(known_hosts: known_hosts, identity: key)
     assert Keyword.get(opts, :known_hosts_data) == @known_hosts
@@ -111,4 +158,5 @@ github.com,192.30.252.128 ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAq2A7hRGmdnm9tUDbO9
     {_, opts} = SSHClientKeyAPI.with_options(known_hosts: known_hosts, identity: key)
     assert Keyword.get(opts, :identity_data) == @private_key
   end
+
 end
