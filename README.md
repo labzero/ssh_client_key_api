@@ -15,7 +15,7 @@ dependencies in `mix.exs`:
 
 ```elixir
   def deps do
-    [{:ssh_client_key_api, "~> 0.0.1"}]
+    [{:ssh_client_key_api, "~> 0.2.0"}]
   end
 ```
 

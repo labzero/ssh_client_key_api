@@ -38,7 +38,7 @@ defmodule SSHClientKeyAPI do
     - `known_hosts`: `IO.device` providing the known hosts list. If providing a File IO, it should have been opened in `:write` mode (required)
     - `silently_accept_hosts`: `boolean` silently accept and add new hosts to the known hosts. By default only known hosts will be accepted.
     - `passphrase` : `binary` passphrase if your key is protected (optional)
-    
+
      by default it will use the the files found in `System.user_home!`
 
     ### Example
@@ -93,17 +93,17 @@ defmodule SSHClientKeyAPI do
     false
   end
 
-  def user_key(alg, opts) when alg in @key_algorithms do    
+  def user_key(alg, opts) when alg in @key_algorithms do
       opts
       |> identity_data
       |> to_string
       |> :public_key.pem_decode
       |> List.first
-      |> decode_pem_entry(Keyword.get(opts, :passphrase))    
+      |> decode_pem_entry(Keyword.get(opts, :passphrase))
   end
 
   def user_key(alg, _) do
-    message ="unsupported user key algorithm #{inspect alg}"
+    message = "unsupported user key algorithm #{inspect alg}"
     IO.puts(message)
     {:error, message}
   end
@@ -117,12 +117,10 @@ defmodule SSHClientKeyAPI do
   end
 
   defp decode_pem_entry({_type, _data, _cipher_info} = entry, phrase) do
-    try do
       {:ok, :public_key.pem_entry_decode(entry, phrase)}
-    rescue 
-      _e in MatchError -> {:error, "passphrase for protected key is invalid"}
-    end
-  end  
+  rescue
+    _e in MatchError -> {:error, "passphrase for protected key is invalid"}
+  end
 
   defp identity_data(opts) do
     cb_opts(opts)[:identity_data]

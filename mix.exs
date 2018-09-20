@@ -2,9 +2,8 @@ defmodule SSHClientKeyApi.Mixfile do
   use Mix.Project
 
 
-  @version "0.1.1"
+  @version "0.2.0"
   @source "https://github.com/labzero/ssh_client_key_api"
-
 
   def project do
     [app: :ssh_client_key_api,
