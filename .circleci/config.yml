@@ -39,7 +39,6 @@ jobs:
       - run: mix compile
       - run: mix dialyzer
       - run: mix credo --strict
-      - run: mix coveralls
       - store_test_results:
           path: ~/ssh_client_key_api/_build/test/lib/ssh_client_key_api
       - store_artifacts:
