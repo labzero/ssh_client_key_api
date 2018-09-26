@@ -7,16 +7,20 @@ defmodule SSHClientKeyApi.Mixfile do
 
   def project do
     [app: :ssh_client_key_api,
-     version: @version,
-     elixir: "~> 1.3",
-     elixirc_paths: ["lib"],
-     build_embedded: Mix.env == :prod,
-     start_permanent: Mix.env == :prod,
-     source_url: @source,
-     docs: [source_ref: "v#{@version}", main: "readme", extras: ["README.md"]],
-     description: description(),
-     deps: deps(),
-     package: package()]
+      version: @version,
+      elixir: "~> 1.4",
+      elixirc_paths: ["lib"],
+      test_coverage: [tool: ExCoveralls],
+      dialyzer: [plt_add_deps: :transitive],
+      preferred_cli_env: [coveralls: :test],
+      build_embedded: Mix.env == :prod,
+      start_permanent: Mix.env == :prod,
+      source_url: @source,
+      docs: [source_ref: "v#{@version}", main: "readme", extras: ["README.md"]],
+      description: description(),
+      deps: deps(),
+      package: package()
+    ]
   end
 
   def application do
@@ -24,8 +28,12 @@ defmodule SSHClientKeyApi.Mixfile do
   end
 
   defp deps do
-    [{:credo, "~> 0.8", runtime: false, only: [:dev, :test]},
-     {:ex_doc, "~> 0.16", runtime: false, only: [:dev]}]
+    [
+      {:credo, "~> 0.10", runtime: false, only: [:dev, :test]},
+      {:dialyxir, "~> 0.5", only: [:dev, :test], runtime: false},
+      {:excoveralls, "~> 0.6", only: :test},
+      {:ex_doc, "~> 0.16", runtime: false, only: [:dev]}
+    ]
   end
 
   defp description do
