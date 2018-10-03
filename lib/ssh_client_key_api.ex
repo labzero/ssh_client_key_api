@@ -99,7 +99,7 @@ defmodule SSHClientKeyAPI do
       |> to_string
       |> :public_key.pem_decode
       |> List.first
-      |> decode_pem_entry(Keyword.get(opts, :passphrase))
+      |> decode_pem_entry(passphrase(opts))
   end
 
   def user_key(alg, _) do
@@ -136,6 +136,10 @@ defmodule SSHClientKeyAPI do
 
   defp known_hosts_data(opts) do
     cb_opts(opts)[:known_hosts_data]
+  end
+
+  defp passphrase(opts) do
+    cb_opts(opts)[:passphrase]
   end
 
   defp cb_opts(opts) do
