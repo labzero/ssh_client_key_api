@@ -2,6 +2,7 @@ defmodule SSHClientKeyAPITest do
   use ExUnit.Case
 
   alias SSHClientKeyAPI
+  alias SSHClientKeyAPI.KeyError
 
   @private_key """
 -----BEGIN RSA PRIVATE KEY-----
@@ -132,19 +133,30 @@ FSlw/QlRe3XqAJDRtHyiI2d4JIPFcOjZQSF7fURYPEKaRRtQRvSaI0D9fYwuRZDY
   end
 
   test "user key returns error if passphrase is missing for protected key", %{protected_key: protected_key} do
-    result = SSHClientKeyAPI.user_key(
-      :"ssh-dss",
-      [key_cb_private: [identity: protected_key, identity_data: IO.binread(protected_key, :all)]]
-    )
-    assert {:error, _} = result
+    assert_raise KeyError, ~r/passphrase required/, fn ->
+      SSHClientKeyAPI.user_key(
+        :"ssh-dss",
+        [key_cb_private: [identity: protected_key, identity_data: IO.binread(protected_key, :all)]]
+      )
+      end
   end
 
   test "user key returns error if passphrase is incorrect for protected key", %{protected_key: protected_key} do
-    result = SSHClientKeyAPI.user_key(
-      :"ssh-dss",
-      [key_cb_private: [passphrase: 'wrong', identity: protected_key, identity_data: IO.binread(protected_key, :all)]]
-    )
-    assert {:error, _} = result
+    assert_raise KeyError, ~r/passphrase invalid/, fn ->
+      SSHClientKeyAPI.user_key(
+        :"ssh-dss",
+        [key_cb_private: [passphrase: 'wrong', identity: protected_key, identity_data: IO.binread(protected_key, :all)]]
+      )
+    end
+  end
+
+  test "user key returns error if trying to use unsupported algorithm", %{protected_key: protected_key} do
+    assert_raise KeyError, ~r/not supported/, fn ->
+      SSHClientKeyAPI.user_key(
+        :"ssh-scooby-doo",
+        [key_cb_private: [passphrase: 'wrong', identity: protected_key, identity_data: IO.binread(protected_key, :all)]]
+      )
+    end
   end
 
   test "with correct passphrase, user key returns contents of protected key", %{protected_key: protected_key} do
