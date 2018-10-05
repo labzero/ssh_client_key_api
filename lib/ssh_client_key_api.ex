@@ -1,4 +1,5 @@
 defmodule SSHClientKeyAPI do
+  alias SSHClientKeyAPI.KeyError
 
   @behaviour :ssh_client_key_api
   @key_algorithms :ssh.default_algorithms()[:public_key]
@@ -103,23 +104,25 @@ defmodule SSHClientKeyAPI do
   end
 
   def user_key(alg, _) do
-    message = "unsupported user key algorithm #{inspect alg}"
-    IO.puts(message)
-    {:error, message}
+    raise KeyError, {:unsupported_algorithm, alg}
+  end
+
+  defp decode_pem_entry(nil, _phrase) do
+    raise KeyError, {:unsupported_algorithm, :unknown}
   end
 
   defp decode_pem_entry({_type, _data, :not_encrypted} = entry, _) do
     {:ok, :public_key.pem_entry_decode(entry)}
   end
 
-  defp decode_pem_entry({_type, _data, _cipher_info}, nil) do
-    {:error, "passphrase needed for protected key"}
+  defp decode_pem_entry({_type, _data, {alg, _}}, nil) do
+    raise KeyError, {:passphrase_required, alg}
   end
 
-  defp decode_pem_entry({_type, _data, _cipher_info} = entry, phrase) do
-      {:ok, :public_key.pem_entry_decode(entry, phrase)}
+  defp decode_pem_entry({_type, _data, {alg, _}} = entry, phrase) do
+    {:ok, :public_key.pem_entry_decode(entry, phrase)}
   rescue
-    _e in MatchError -> {:error, "passphrase for protected key is invalid"}
+    _e in MatchError -> raise KeyError, {:incorrect_passphrase, alg}
   end
 
   defp identity_data(opts) do
