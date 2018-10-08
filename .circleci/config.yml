@@ -15,9 +15,6 @@ jobs:
       - run:
           name: Install Elixir
           command: script/ci/prepare.sh
-      - run:
-          name: Code Formatter
-          command: mix format --check-formatted
       - save_cache:
           key: environment-cache-{{ checksum ".circleci/config.yml" }}-{{ checksum "script/ci/prepare.sh" }}-{{ arch }}
           paths:
@@ -39,6 +36,9 @@ jobs:
             - ~/.mix
             - _build
             - deps
+      - run:
+          name: Code Formatter
+          command: mix format --check-formatted --dry-run
       - run: mix compile
       - run: mix dialyzer
       - run: mix credo --strict

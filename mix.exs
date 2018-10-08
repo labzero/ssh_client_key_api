@@ -8,7 +8,7 @@ defmodule SSHClientKeyApi.Mixfile do
     [
       app: :ssh_client_key_api,
       version: @version,
-      elixir: "~> 1.5",
+      elixir: "~> 1.6",
       elixirc_paths: ["lib"],
       test_coverage: [tool: ExCoveralls],
       dialyzer: [plt_add_deps: :transitive],
