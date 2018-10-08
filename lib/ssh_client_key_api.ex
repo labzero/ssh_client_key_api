@@ -53,11 +53,13 @@ defmodule SSHClientKeyAPI do
 
   """
   def with_options(opts \\ []) do
-      opts = with_defaults(opts)
-      opts =
-        opts
-        |> Keyword.put(:identity_data, IO.binread(opts[:identity], :all))
-        |> Keyword.put(:known_hosts_data, IO.binread(opts[:known_hosts], :all))
+    opts = with_defaults(opts)
+
+    opts =
+      opts
+      |> Keyword.put(:identity_data, IO.binread(opts[:identity], :all))
+      |> Keyword.put(:known_hosts_data, IO.binread(opts[:known_hosts], :all))
+
     {__MODULE__, opts}
   end
 
@@ -70,37 +72,39 @@ defmodule SSHClientKeyAPI do
         |> (fn decoded -> decoded ++ [{key, [{:hostnames, [hostname]}]}] end).()
         |> :public_key.ssh_encode(:known_hosts)
         |> (fn encoded -> IO.binwrite(known_hosts(opts), encoded) end).()
+
       _ ->
-        message =
-          """
-          Error: unknown fingerprint found for #{inspect hostname} #{inspect key}.
-          You either need to add a known good fingerprint to your known hosts file for this host,
-          *or* pass the silently_accept_hosts option to your client key callback
-          """
+        message = """
+        Error: unknown fingerprint found for #{inspect(hostname)} #{inspect(key)}.
+        You either need to add a known good fingerprint to your known hosts file for this host,
+        *or* pass the silently_accept_hosts option to your client key callback
+        """
+
         {:error, message}
     end
   end
 
   def is_host_key(key, hostname, alg, opts) when alg in @key_algorithms do
-    silently_accept_hosts(opts) || opts
-    |> known_hosts_data
-    |> to_string
-    |> :public_key.ssh_decode(:known_hosts)
-    |> has_fingerprint(key, hostname)
+    silently_accept_hosts(opts) ||
+      opts
+      |> known_hosts_data
+      |> to_string
+      |> :public_key.ssh_decode(:known_hosts)
+      |> has_fingerprint(key, hostname)
   end
 
   def is_host_key(_, _, alg, _) do
-    IO.puts("unsupported host key algorithm #{inspect alg}")
+    IO.puts("unsupported host key algorithm #{inspect(alg)}")
     false
   end
 
   def user_key(alg, opts) when alg in @key_algorithms do
-      opts
-      |> identity_data
-      |> to_string
-      |> :public_key.pem_decode
-      |> List.first
-      |> decode_pem_entry(passphrase(opts))
+    opts
+    |> identity_data
+    |> to_string
+    |> :public_key.pem_decode()
+    |> List.first()
+    |> decode_pem_entry(passphrase(opts))
   end
 
   def user_key(alg, _) do
@@ -150,12 +154,10 @@ defmodule SSHClientKeyAPI do
   end
 
   defp has_fingerprint(fingerprints, key, hostname) do
-    Enum.any?(fingerprints,
-      fn {k, v} -> (k == key) && (Enum.member?(v[:hostnames], hostname)) end
-      )
+    Enum.any?(fingerprints, fn {k, v} -> k == key && Enum.member?(v[:hostnames], hostname) end)
   end
 
-  defp default_user_dir, do: Path.join(System.user_home!, ".ssh")
+  defp default_user_dir, do: Path.join(System.user_home!(), ".ssh")
 
   defp default_identity do
     default_user_dir()
@@ -175,5 +177,4 @@ defmodule SSHClientKeyAPI do
     |> Keyword.put_new_lazy(:known_hosts, &default_known_hosts/0)
     |> Keyword.put_new(:silently_accept_hosts, false)
   end
-
 end
