@@ -126,8 +126,8 @@ defmodule SSHClientKeyAPI do
   defp decode_pem_entry({_type, _data, {alg, _}} = entry, phrase) do
     {:ok, :public_key.pem_entry_decode(entry, phrase)}
   rescue
-    # credo:disable-for-next-line Credo.Check.Warning.RaiseInsideRescue
     _e in MatchError ->
+      # credo:disable-for-next-line Credo.Check.Warning.RaiseInsideRescue
       raise KeyError, {:incorrect_passphrase, alg}
   end
 
