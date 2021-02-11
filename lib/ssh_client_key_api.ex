@@ -1,57 +1,41 @@
 defmodule SSHClientKeyAPI do
+  @external_resource "README.md"
+  @moduledoc "README.md"
+             |> File.read!()
+             |> String.split("<!-- MDOC !-->")
+             |> Enum.fetch!(1)
+
   alias SSHClientKeyAPI.KeyError
 
   @behaviour :ssh_client_key_api
   @key_algorithms :ssh.default_algorithms()[:public_key]
 
-  @moduledoc ~S"""
-
-  Simple wrapper for the Erlang `:ssh_client_key_api` behavior, to
-  make it easier to specify SSH keys and `known_hosts` files independently of
-  any particular user's home directory
-
-  It is meant to primarily be used via the convenience function `with_options`:
-
-  ```
-  key = File.open!("path/to/keyfile")
-  known_hosts = File.open!("path/to/known_hosts")
-  cb = SSHClientKeyAPI.with_options(identity: key, known_hosts: known_hosts, silently_accept_hosts: true)
-  ```
-
-  The result can be passed as an option when creating an `SSHKit.SSH.Connection`:
-
-  ```
-  SSHKit.SSH.connect("example.com", key_cb: cb)
-  ```
-
-    - `identity`: `IO.device` providing the ssh key (required)
-    - `known_hosts`: `IO.device` providing the known hosts list. If providing a File IO, it should have been opened in `:write` mode (required)
-    - `silently_accept_hosts`: `boolean` silently accept and add new hosts to the known hosts. By default only known hosts will be accepted.
-  """
-
-  @spec with_options(opts :: list) :: {atom, list}
   @doc """
-    returns a tuple suitable for passing the `SSHKit.SSH.Connect` as the `key_cb` option.
+  Returns a tuple suitable for passing the `SSHKit.SSH.connect/2` as the `key_cb` option.
 
-    ### Options
+  ## Options
 
-    - `identity`: `IO.device` providing the ssh key (required)
-    - `known_hosts`: `IO.device` providing the known hosts list. If providing a File IO, it should have been opened in `:write` mode (required)
-    - `silently_accept_hosts`: `boolean` silently accept and add new hosts to the known hosts. By default only known hosts will be accepted.
-    - `passphrase` : `binary` passphrase if your key is protected (optional)
+    * `:identity` - [`IO.device`] providing the ssh key (required)
 
-     by default it will use the the files found in `System.user_home!`
+    * `:known_hosts` - [`IO.device`] providing the known hosts list. If providing a
+      File IO, it should have been opened in `:write` mode (required)
 
-    ### Example
+    * `:silently_accept_hosts` - [`boolean`] silently accept and add new hosts to the
+      known hosts. By default only known hosts will be accepted.
 
-    ```
-    key = File.open!("path/to/keyfile")
-    known_hosts = File.open!("path/to/known_hosts")
-    cb = SSHClientKeyAPI.with_options(identity: key, known_hosts: known_hosts)
-    SSHKit.SSH.connect("example.com", key_cb: cb)
-    ```
+    * `:passphrase` - [`binary`] passphrase if your key is protected (optional)
+
+  By default it will use the the files found in `System.user_home!/0`.
+
+  ## Examples
+
+      key = File.open!("path/to/keyfile")
+      known_hosts = File.open!("path/to/known_hosts")
+      cb = SSHClientKeyAPI.with_options(identity: key, known_hosts: known_hosts)
+      SSHKit.SSH.connect("example.com", key_cb: cb)
 
   """
+  @spec with_options(opts :: list) :: {atom, list}
   def with_options(opts \\ []) do
     opts = with_defaults(opts)
 
