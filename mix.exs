@@ -1,8 +1,8 @@
-defmodule SSHClientKeyApi.Mixfile do
+defmodule SSHClientKeyAPI.Mixfile do
   use Mix.Project
 
-  @version "0.2.1"
   @source "https://github.com/labzero/ssh_client_key_api"
+  @version "0.2.1"
 
   def project do
     [
@@ -15,16 +15,17 @@ defmodule SSHClientKeyApi.Mixfile do
       preferred_cli_env: [coveralls: :test],
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
-      source_url: @source,
-      docs: [source_ref: "v#{@version}", main: "readme", extras: ["README.md"]],
       description: description(),
       deps: deps(),
+      docs: docs(),
       package: package()
     ]
   end
 
   def application do
-    [extra_applications: [:logger]]
+    [
+      extra_applications: [:logger, :ssh, :public_key]
+    ]
   end
 
   defp deps do
@@ -32,7 +33,17 @@ defmodule SSHClientKeyApi.Mixfile do
       {:credo, "~> 0.10", runtime: false, only: [:dev, :test]},
       {:dialyxir, "~> 0.5", only: [:dev, :test], runtime: false},
       {:excoveralls, "~> 0.6", only: :test},
-      {:ex_doc, "~> 0.16.0", runtime: false, only: [:dev]}
+      {:ex_doc, ">= 0.0.0", only: [:dev], runtime: false}
+    ]
+  end
+
+  defp docs do
+    [
+      main: "SSHClientKeyAPI",
+      source_url: @source,
+      source_ref: "v#{@version}",
+      api_references: false,
+      extra_section: []
     ]
   end
 
