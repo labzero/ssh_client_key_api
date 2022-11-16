@@ -30,8 +30,8 @@ defmodule SSHClientKeyAPI.Mixfile do
 
   defp deps do
     [
-      {:credo, "~> 0.10", runtime: false, only: [:dev, :test]},
-      {:dialyxir, "~> 0.5", only: [:dev, :test], runtime: false},
+      {:credo, "~> 1.6.7", runtime: false, only: [:dev, :test]},
+      {:dialyxir, "~> 1.2.0", only: [:dev, :test], runtime: false},
       {:excoveralls, "~> 0.6", only: :test},
       {:ex_doc, ">= 0.0.0", only: [:dev], runtime: false}
     ]
