@@ -16,6 +16,17 @@ By itself, `:ssh_client_key_api` does not provide SSH functionality, it only add
 a way to send private key information to an SSH connection. It is meant to be
 used alongside an SSH library such as `:ssh`, `SSHex`, `SSHKit`, or the like.
 
+Note: Upgrade to ssh_client_key_api 0.3.0 or higher for use with Erlang/OTP 25
+
+## Supported Key Types
+
+- rsa - with or without passphrase
+- ed25519 - only supported without a passphrase
+- ecdsa - only supported without a passphrase
+- dsa - with or without passphrase (but DSA keys are [not recommended](https://security.stackexchange.com/a/46781))
+  - OpenSSH 7.0 and higher no longer accept DSA keys by default
+  - Note tested on OTP 25+, but still expected to work
+
 ## Installation
 
 The package can be installed by adding `:ssh_client_key_api` to your list of
@@ -35,8 +46,9 @@ end
 `with_options/1`. See `with_options/1` for full list of available options.
 
 ```elixir
-key = File.open!("path/to/keyfile.pem")
-known_hosts = File.open!("path/to/known_hosts")
+key = File.open!("path/to/id_rsa") # Other key types supported as well
+known_hosts = File.open!("path/to/known_hosts", [:read, :write])
+
 cb = SSHClientKeyAPI.with_options(
   identity: key,
   known_hosts: known_hosts,

@@ -1,3 +1,5 @@
+# Note: Logger.warn exceptions because the :ssh_client_key_api will silently
+# catches exceptions
 defmodule SSHClientKeyAPI do
   @external_resource "README.md"
   @moduledoc "README.md"
@@ -5,13 +7,14 @@ defmodule SSHClientKeyAPI do
              |> String.split("<!-- MDOC !-->")
              |> Enum.fetch!(1)
 
-  alias SSHClientKeyAPI.KeyError
+  require Logger
+  require Record
 
   @behaviour :ssh_client_key_api
-  @key_algorithms :ssh.default_algorithms()[:public_key]
 
   @doc """
-  Returns a tuple suitable for passing the `SSHKit.SSH.connect/2` as the `key_cb` option.
+  Returns a tuple suitable for passing to `:ssh.connect/3` or
+  `SSHKit.SSH.connect/2` as the `key_cb` option.
 
   ## Options
 
@@ -35,7 +38,6 @@ defmodule SSHClientKeyAPI do
       SSHKit.SSH.connect("example.com", key_cb: cb)
 
   """
-  @spec with_options(opts :: list) :: {atom, list}
   def with_options(opts \\ []) do
     opts = with_defaults(opts)
 
@@ -47,14 +49,17 @@ defmodule SSHClientKeyAPI do
     {__MODULE__, opts}
   end
 
-  def add_host_key(hostname, key, opts) do
+  @impl :ssh_client_key_api
+  def add_host_key(hostname, _port, key, opts) do
+    hostname = normalize_hostname(hostname)
+
     case silently_accept_hosts(opts) do
       true ->
         opts
-        |> known_hosts_data
-        |> :public_key.ssh_decode(:known_hosts)
+        |> known_hosts_data()
+        |> :ssh_file.decode(:known_hosts)
         |> (fn decoded -> decoded ++ [{key, [{:hostnames, [hostname]}]}] end).()
-        |> :public_key.ssh_encode(:known_hosts)
+        |> :ssh_file.encode(:known_hosts)
         |> (fn encoded -> IO.binwrite(known_hosts(opts), encoded) end).()
 
       _ ->
@@ -66,82 +71,118 @@ defmodule SSHClientKeyAPI do
 
         {:error, message}
     end
+  rescue
+    e ->
+      Logger.warn("Exception in add_host_key: #{inspect(e)}")
+      raise e
   end
 
-  def is_host_key(key, hostname, alg, opts) when alg in @key_algorithms do
-    silently_accept_hosts(opts) ||
+  @impl :ssh_client_key_api
+  def is_host_key(key, host, port, alg, opts) do
+    :ssh_file.is_host_key(key, host, port, alg, opts)
+  rescue
+    e ->
+      Logger.warn("Exception in is_host_key: #{inspect(e)}")
+  end
+
+  # There's a fundamental disconnect between how the key_cb option works and how
+  # we want to use it. The key_cb option is expecting us to receive the
+  # algorithm type and then find the matching key, but we already know the exact
+  # key we want to use. So instead we return the key for every algorithm type
+  # and erlang will ignore the keys we return for an incorrect algorithm type.
+  #
+  # Ideally we could instead find the matching algorithm type for the key
+  # provided by the user without requiring the user to manually provide the key
+  # type but thus far I've been unable to find a way to find the algorithm type
+  # for the key
+  @impl :ssh_client_key_api
+  def user_key(_alg, opts) do
+    raw_key =
       opts
-      |> known_hosts_data
-      |> to_string
-      |> :public_key.ssh_decode(:known_hosts)
-      |> has_fingerprint(key, hostname)
-  end
+      |> identity_data()
+      |> to_string()
 
-  def is_host_key(_, _, alg, _) do
-    IO.puts("unsupported host key algorithm #{inspect(alg)}")
-    false
-  end
-
-  def user_key(alg, opts) when alg in @key_algorithms do
-    opts
-    |> identity_data
-    |> to_string
+    raw_key
     |> :public_key.pem_decode()
     |> List.first()
-    |> decode_pem_entry(passphrase(opts))
-  end
+    |> case do
+      {{:no_asn1, :new_openssh}, _data, :not_encrypted} ->
+        :ssh_file.decode(raw_key, :public_key)
+        |> case do
+          [{key, _comments} | _rest] ->
+            {:ok, key}
 
-  def user_key(alg, _) do
-    raise KeyError, {:unsupported_algorithm, alg}
-  end
+          {:error, :key_decode_failed} ->
+            message =
+              "unable to decode key, possibly because the key type does not support a passphrase"
 
-  defp decode_pem_entry(nil, _phrase) do
-    raise KeyError, {:unsupported_algorithm, :unknown}
-  end
+            Logger.warn(message)
+            {:error, :key_decode_failed}
 
-  defp decode_pem_entry({_type, _data, :not_encrypted} = entry, _) do
-    {:ok, :public_key.pem_entry_decode(entry)}
-  end
+          other ->
+            Logger.warn("Unexpected return value from :ssh_file.decode/2 #{inspect(other)}")
+            {:error, :ssh_client_key_api_unable_to_decode_key}
+        end
 
-  defp decode_pem_entry({_type, _data, {alg, _}}, nil) do
-    raise KeyError, {:passphrase_required, alg}
-  end
+      {_type, _data, :not_encrypted} = entry ->
+        result = :public_key.pem_entry_decode(entry)
 
-  defp decode_pem_entry({_type, _data, {alg, _}} = entry, phrase) do
-    {:ok, :public_key.pem_entry_decode(entry, phrase)}
+        {:ok, result}
+
+      {_type, _data, {_alg, _}} = entry ->
+        result = :public_key.pem_entry_decode(entry, passphrase(opts))
+        {:ok, result}
+
+      error ->
+        Logger.warn("Unexpected return value from :public_key.decode/2 #{inspect(error)}")
+        {:error, :ssh_client_key_api_unable_to_decode_key}
+    end
   rescue
-    _e in MatchError ->
-      # credo:disable-for-next-line Credo.Check.Warning.RaiseInsideRescue
-      raise KeyError, {:incorrect_passphrase, alg}
-  end
-
-  defp identity_data(opts) do
-    cb_opts(opts)[:identity_data]
-  end
-
-  defp silently_accept_hosts(opts) do
-    cb_opts(opts)[:silently_accept_hosts]
-  end
-
-  defp known_hosts(opts) do
-    cb_opts(opts)[:known_hosts]
-  end
-
-  defp known_hosts_data(opts) do
-    cb_opts(opts)[:known_hosts_data]
-  end
-
-  defp passphrase(opts) do
-    cb_opts(opts)[:passphrase]
+    e ->
+      Logger.warn("user_key exception: #{inspect(e)}")
+      raise e
   end
 
   defp cb_opts(opts) do
     opts[:key_cb_private]
   end
 
-  defp has_fingerprint(fingerprints, key, hostname) do
-    Enum.any?(fingerprints, fn {k, v} -> k == key && Enum.member?(v[:hostnames], hostname) end)
+  defp known_hosts_data(opts) do
+    cb_opts(opts)[:known_hosts_data]
   end
+
+  defp known_hosts(opts) do
+    cb_opts(opts)[:known_hosts]
+  end
+
+  defp silently_accept_hosts(opts) do
+    cb_opts(opts)[:silently_accept_hosts]
+  end
+
+  defp identity_data(opts) do
+    cb_opts(opts)[:identity_data]
+  end
+
+  defp passphrase(opts) do
+    cb_opts(opts)[:passphrase]
+    |> case do
+      # Needs to be a charlist
+      passphrase when is_list(passphrase) ->
+        passphrase
+
+      passphrase when is_binary(passphrase) ->
+        Logger.warn("Passphrase must be a charlist, not a binary. Ignoring.")
+        nil
+
+      nil ->
+        nil
+    end
+  end
+
+  # Handles the case where the ype of hostname is
+  # `[inet:ip_address() | inet:hostname()]`
+  defp normalize_hostname([hostname, _ip_addr]), do: hostname
+  defp normalize_hostname(hostname), do: hostname
 
   defp default_user_dir, do: Path.join(System.user_home!(), ".ssh")
 
