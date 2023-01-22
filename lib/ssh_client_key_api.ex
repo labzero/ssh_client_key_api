@@ -55,14 +55,11 @@ defmodule SSHClientKeyAPI do
 
     case silently_accept_hosts(opts) do
       true ->
-        opts
-        |> known_hosts_data()
-        |> :ssh_file.decode(:known_hosts)
-        |> (fn decoded -> decoded ++ [{key, [{:hostnames, [hostname]}]}] end).()
-        |> :ssh_file.encode(:known_hosts)
-        |> (fn encoded -> IO.binwrite(known_hosts(opts), encoded) end).()
+        # Don't save this to a file
+        :ok
 
       _ ->
+        # TODO: This seems to be missing a case to check if the host key is actually in the file
         message = """
         Error: unknown fingerprint found for #{inspect(hostname)} #{inspect(key)}.
         You either need to add a known good fingerprint to your known hosts file for this host,
